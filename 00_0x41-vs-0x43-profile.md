@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 >
-> **Research result:** NVIDIA MODS reverse engineering confirmed that the stock CMP 170HX Samsung profile is identified by the composite key `0x4108` as HBM2 `XA2_8HI`, while MODS `455.229` maps raw model part `0x43` to the HBM2E `?_16GB_8HI` profile. The reconstructed consumers are limited to device identification and density decoding, Host-to-JTAG/IEEE 1500, and memory-repair functionality. No direct path from either profile to GA100 DevInit, refresh, timing configuration, or activation of the additional address capacity required for 80 GB was found.
+> **Research result:** Reverse engineering of the NVIDIA MODS **Samsung HBM identification path** confirmed that the stock CMP 170HX Samsung profile is identified by the composite key `0x4108` as Samsung HBM2 `XA2_8HI`, while the Samsung model table in MODS `455.229` maps raw model part `0x43` to the Samsung HBM2E `?_16GB_8HI` profile. The reconstructed consumers of these Samsung model profiles are limited to device identification and density decoding, Host-to-JTAG/IEEE 1500, and memory-repair functionality. No direct path from either Samsung profile to GA100 DevInit, refresh, timing configuration, or activation of the additional address capacity required for 80 GB was found.
 
 ## Scope and provenance
 
