@@ -1,5 +1,9 @@
 # CMP 170HX Samsung HBM Capacity-Profile Hypothesis
 
+> [!IMPORTANT]
+>
+> **Research result:** NVIDIA MODS reverse engineering confirmed that the stock CMP 170HX Samsung profile is identified by the composite key `0x4108` as HBM2 `XA2_8HI`, while MODS `455.229` maps raw model part `0x43` to the HBM2E `?_16GB_8HI` profile. The reconstructed consumers are limited to device identification and density decoding, Host-to-JTAG/IEEE 1500, and memory-repair functionality. No direct path from either profile to GA100 DevInit, refresh, timing configuration, or activation of the additional address capacity required for 80 GB was found.
+
 ## Scope and provenance
 
 This branch follows a research lead documented in the Chinese article ["170Hx 10G Unlock to 80G Exploration"](https://blog.kkk.rs/archives/71), published on 9 August 2026 and updated on 10 August 2026. The article contains two different kinds of evidence that must not be conflated:
