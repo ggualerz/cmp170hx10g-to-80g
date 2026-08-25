@@ -486,7 +486,11 @@ This is one research lead among several, not an assumption about where the final
 
 ## MODS reverse-engineering status
 
-MODS reverse engineering has reconstructed the Samsung HBM identification path and confirmed the `0x4108`/`XA2_8HI` and `0x43`/`?_16GB_8HI` profiles. However, the consumers identified so far are limited to device reporting, Host-to-JTAG/IEEE1500 and memory-repair functionality. **No direct connection between these model profiles and GA100 DevInit, refresh, timing configuration, or the additional address capacity required for 80 GB has been demonstrated.**
+The dedicated Samsung GA100 Host-to-JTAG/IEEE 1500 investigation is complete and is a **dead end for hidden-capacity activation within the examined MODS path**. Reverse engineering confirmed the `0x4108`/`XA2_8HI` and `0x43`/`?_16GB_8HI` profiles, but their recovered consumers are limited to device reporting, density decoding, diagnostics, IEEE 1500 support, and memory repair. No operation capable of changing HBM geometry, internal addressability, density, row-address width, or shadow state was found.
+
+The active `SamsungHbm2eGA100` method and descriptor sets are unchanged between MODS `455.127` and `455.229`, despite the `0x43` profile changing from Hi4 to Hi8. The subsequent FRB/FUB analysis resolved those consumers to row/fuse repair and general field-programmable-fuse/security workflows. This closes this particular research path, not the broader CMP 170HX 80 GB problem.
+
+See the final [`01_ieee1500-samsung-hidden-capacity.md`](01_ieee1500-samsung-hidden-capacity.md) report and its detailed [`01_ieee1500-samsung-hidden-capacity_map.md`](01_ieee1500-samsung-hidden-capacity_map.md).
 
 The version numbers below identify MODS builds/runtime directories, not ordinary public display-driver packages. Locally inspected builds are distinguished from environments reported by the Chinese article:
 
@@ -649,7 +653,7 @@ The main current leads are:
 * compare Samsung 8-Gb and 16-Gb profiles known to NVIDIA MODS
 * investigate MRS differences
 * investigate DevInit / FBFLCN / training-generated state
-* understand the GA100 IEEE1500 interface
+* pursue the GA100 IEEE1500 interface again only if new evidence connects it to geometry, addressability, or shadow state
 * investigate Samsung vendor-specific HBM configuration
 * determine the physical DRAM die used in the CMP
 * investigate possible relationships with Flashbolt / K4C6E1K6MB
