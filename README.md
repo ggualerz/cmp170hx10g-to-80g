@@ -484,6 +484,21 @@ If it contains model-specific HBM setup information, the difference between the 
 
 This is one research lead among several, not an assumption about where the final solution must exist.
 
+## MODS reverse-engineering status
+
+MODS reverse engineering has reconstructed the Samsung HBM identification path and confirmed the `0x4108`/`XA2_8HI` and `0x43`/`?_16GB_8HI` profiles. However, the consumers identified so far are limited to device reporting, Host-to-JTAG/IEEE1500 and memory-repair functionality. **No direct connection between these model profiles and GA100 DevInit, refresh, timing configuration, or the additional address capacity required for 80 GB has been demonstrated.**
+
+The version numbers below identify MODS builds/runtime directories, not ordinary public display-driver packages. Locally inspected builds are distinguished from environments reported by the Chinese article:
+
+| Version | Evidence and result | Download/source |
+| --- | --- | --- |
+| `455.127` | Acquired and statically inspected locally. Samsung `0x43` maps to HBM2E `?_16GB_4HI`/Hi4. | [AllThatLinux MODS archive (Google Drive folder)](https://drive.google.com/drive/folders/1ySck0mbQ7HhJuCBtzbukwGp05ILWCd_f) |
+| `455.229` | Acquired and statically inspected locally. Samsung `0x43` maps to HBM2E `?_16GB_8HI`/Hi8, confirming that the mapping changed after `455.127`. | [MODS 455.229 image (Google Drive)](https://drive.google.com/file/d/1gVJGwlKEsBnkt-WnXF7l8_qxBlIpvzyR/view) |
+| `455.263.1` | The Chinese article reports usable `hbm.jse` output with this runtime. Its photograph confirms a `/home/455.263.1` directory, but the exact package has not been recovered for independent inspection. | [Chinese investigation](https://blog.kkk.rs/archives/71) — no verified public download currently known |
+| `470.10` | The Chinese article reports that its `hbm.jse` attempt did not produce usable output. This runtime has not been inspected locally. | [Chinese investigation](https://blog.kkk.rs/archives/71) |
+
+The same article photograph also shows a `455.219` directory, but no specific result has yet been attributed to that runtime. Binary identities, hashes, offsets, the reconstructed lookup path, and the evidence boundaries are recorded in [`00_0x41-vs-0x43-profile.md`](00_0x41-vs-0x43-profile.md).
+
 # IEEE1500
 
 HBM2/HBM2E exposes an IEEE1500 wrapper.
@@ -719,4 +734,3 @@ the complete reproducible unlock procedure
 ```
 
 **The CMP 170HX 10 GB → stable 80 GB problem remains open.**
-
