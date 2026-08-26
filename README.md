@@ -23,6 +23,28 @@ The project deliberately distinguishes between:
 
 A larger framebuffer reported by software is not considered proof of additional physical memory.
 
+# Research Status
+
+Three research phases are preserved in this repository:
+
+| Phase | Result | Documents |
+| --- | --- | --- |
+| `00` Samsung `0x41` vs `0x43` | Confirmed the MODS profile distinction and its bounded consumers | [`00_0x41-vs-0x43-profile.md`](00_0x41-vs-0x43-profile.md) |
+| `01` Samsung IEEE 1500 | Closed as a hidden-capacity activation path in the examined MODS builds | [`01_ieee1500-samsung-hidden-capacity.md`](01_ieee1500-samsung-hidden-capacity.md), [`map`](01_ieee1500-samsung-hidden-capacity_map.md) |
+| `02` static GA100 HBM state | Closed without a complete stability fix; narrowed the remaining gaps to generated-timing relatching and trained PHY state | [`02_static-ga100-hbm-state.md`](02_static-ga100-hbm-state.md), [`plan`](02_static-ga100-hbm-state_plan.md) |
+
+The `02` phase confirms that coherent 80 GB geometry is:
+
+```text
+FBPA_CFG1 = 0x02779000
+LMR       = 0x28B
+L2 decode = 0x10000300  (observed in the coherent no-fold runs)
+```
+
+The old experimental `80` branch actually compiled `LMR=0x28A`, despite inert metadata naming `0x28B`. That incoherent state produced an exact 40-GiB fold. Later driverless runs with the coherent triplet preserved unique tags through 77.5 GiB, but remained unsuitable for use because of Xid 154, one-context-per-fire behavior, lower extended-region bandwidth, and incomplete top-of-range coverage.
+
+Static analysis found no justified missing register value that completes stable 80 GB operation. The next evidence-bearing step is the matched, read-only collection defined in [`data/02_static-ga100-hbm-state_future-read-only-collection.csv`](data/02_static-ga100-hbm-state_future-read-only-collection.csv). The normalized 47-observation register corpus and schema are [`data/02_static-ga100-hbm-state_registers.csv`](data/02_static-ga100-hbm-state_registers.csv) and [`data/02_static-ga100-hbm-state_registers.schema.json`](data/02_static-ga100-hbm-state_registers.schema.json).
+
 # Known CMP 170HX Configurations
 
 ## CMP 170HX 8 GB
@@ -290,9 +312,7 @@ IEEE1500-related registers
 CSTATUS
 ```
 
-This corpus demonstrates that CMP/A100 comparisons already exist.
-
-The remaining opportunity is to perform a more systematic comparison of the **same CMP10** across:
+The completed static GA100/HBM phase normalized these observations into a reusable corpus. The remaining hardware-dependent comparison is deliberately restricted to the **same CMP10** across:
 
 ```text
 stock
@@ -302,7 +322,7 @@ stock
 
 and then compare those states against A100 40 GB and A100 80 GB.
 
-Multiple snapshots per state are necessary to eliminate dynamic registers.
+Multiple matched snapshots per state are necessary to eliminate dynamic registers and initialization-stage effects. This collection has not been performed by this repository.
 
 One particularly interesting pattern is:
 
@@ -355,7 +375,9 @@ training appropriate to the CMP
 
 # Refresh and Timing
 
-Refresh is a major research lead because of the published stability result.
+Refresh remains unresolved rather than generically unexplored. The Pry paper reports that lowering an unspecified refresh-interval field removed its observed errors, but does not publish the address, value, raw errors, temperature, or complete register state.
+
+The later community experiment identified the visible active field as `FBPA_CONFIG4.tREFI` at `0x009a02a0`, with stock value `0xc4030033`. Writing `0xc403001a` reached all 20 live FBPAs and reduced bandwidth, but did **not** clear that experiment's Xid instability. The two results cannot be called direct reproductions or contradictions without common provenance.
 
 Important parameters include:
 
@@ -367,7 +389,7 @@ refresh multiplier
 temperature-dependent refresh
 ```
 
-A major hypothesis is that the 80 GB geometry may be enabled while some parameters remain appropriate for the smaller memory configuration.
+A remaining hypothesis is that the 80 GB geometry may be enabled while some parameters remain appropriate for the smaller memory configuration.
 
 Possible stale state includes:
 
@@ -382,13 +404,11 @@ PHY configuration
 
 This could potentially explain why 80 GB is addressable but unstable.
 
-It is not yet known whether this is the actual cause.
+Static analysis did not establish this as the cause.
 
 # Generated Timing State
 
-The visible GA100 timing registers may not necessarily represent the active timings.
-
-Existing community research indicates that the memory controller can use internally generated timing values such as:
+The visible writable GA100 timing registers do not represent the active timings in the observed CMP10 mode. `CONFIG0.USE_TIMING_REGS` is zero, so the controller consumes internally generated values such as:
 
 ```text
 TIMING*_GEN
@@ -396,17 +416,17 @@ TIMING*_GEN
 
 rather than only the obvious visible timing registers.
 
-Configuration such as:
+The relevant selector is:
 
 ```text
 USE_TIMING_REGS
 ```
 
-may affect which timing source is active.
+and its observed value selects the generated bank.
 
-Therefore, comparing or modifying only the obvious timing registers may be insufficient.
+Therefore, comparing or modifying only `TIMING0..20` is insufficient. MODS constructs and programs the writable `CONFIG0..9`, MRS, and timing inputs, but no direct software writer for `TIMING*_GEN` was demonstrated. The exact hardware transform and relatch event remain open.
 
-Generated timing state is an important target for future dumps.
+MODS also names per-subpartition/per-byte inbound and outbound `FBIOTRNG ... BRLSHFT1` delay families. This establishes that `FBPA_TRAINING_STATUS=FINISHED` is not the complete training-result corpus; the exact GA100 addresses and VREF result storage remain unresolved.
 
 # Mode Registers
 
