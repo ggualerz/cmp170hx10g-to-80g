@@ -43,7 +43,7 @@ L2 decode = 0x10000300  (observed in the coherent no-fold runs)
 
 The old experimental `80` branch actually compiled `LMR=0x28A`, despite inert metadata naming `0x28B`. That incoherent state produced an exact 40-GiB fold. Later driverless runs with the coherent triplet preserved unique tags through 77.5 GiB, but remained unsuitable for use because of Xid 154, one-context-per-fire behavior, lower extended-region bandwidth, and incomplete top-of-range coverage.
 
-Static analysis found no justified missing register value that completes stable 80 GB operation. The next evidence-bearing step is the matched, read-only collection defined in [`data/02_static-ga100-hbm-state_future-read-only-collection.csv`](data/02_static-ga100-hbm-state_future-read-only-collection.csv). The normalized 47-observation register corpus and schema are [`data/02_static-ga100-hbm-state_registers.csv`](data/02_static-ga100-hbm-state_registers.csv) and [`data/02_static-ga100-hbm-state_registers.schema.json`](data/02_static-ga100-hbm-state_registers.schema.json).
+Static analysis found no justified missing register value that completes stable 80 GB operation. The next evidence-bearing steps are the matched, read-only collection defined in [`data/02_static-ga100-hbm-state_future-read-only-collection.csv`](data/02_static-ga100-hbm-state_future-read-only-collection.csv) and an independent reproduction of the access-path-dependent failure described below. The normalized 47-observation register corpus and schema are [`data/02_static-ga100-hbm-state_registers.csv`](data/02_static-ga100-hbm-state_registers.csv) and [`data/02_static-ga100-hbm-state_registers.schema.json`](data/02_static-ga100-hbm-state_registers.schema.json).
 
 # Known CMP 170HX Configurations
 
@@ -140,6 +140,51 @@ or roughly a 32% throughput loss.
 This is an important clue.
 
 It suggests that obtaining 80 GB of distinct memory and obtaining a **correct 80 GB operating profile** may be separate problems.
+
+# Access-Path-Dependent Failure Report
+
+An independent August 2026 community report by `cuddylac997` adds a distinct failure dimension: behavior may depend on the memory-access path and its associated driver/GSP state, not only on global HBM geometry or PHY stability.
+
+Source: [CMP 170HX 80GB geometry: DMA above ~40 GiB crashes GSP](https://gist.github.com/cuddylac997/c3d80faa2430e3650cd934eda5fd65a9)
+
+The report used four CMP 170HX cards with the coherent geometry:
+
+```text
+CFG1         = 0x02779000
+LMR          = 0x28B
+targetFbBytes = 0x1400000000
+```
+
+It reports the following paired observations:
+
+* tagged CUDA-kernel writes followed by kernel verification were clean through 76 GiB on three cards, including a 300-allocation test clean through 75 GiB
+* an otherwise equivalent test using synchronous `cudaMemcpy(..., cudaMemcpyHostToDevice)` for the fill path faulted after the last 37.75-GiB progress point
+* a separate successful workload at about 38.5 GiB per card and the next progress point at 44 GiB bound the reported transition only approximately, at **38.5–44 GiB**
+* the observed chain was `Xid 1` GSP task exceptions, then `Xid 119` RPC timeouts, then `Xid 154` and PF FLR
+* GSP PC `0x5b2ba28` reportedly recurred across two cards and two programs
+
+This is evidence for a potentially **access-path- or runtime-state-dependent failure**. It is not yet evidence that a Copy Engine has a hard-coded 40-GiB destination aperture. In the report's staging test, H2D copied into a low buffer and a CUDA kernel copied that data to the high allocation; the same failure still occurred. The reported trigger therefore correlates more closely with large H2D activity after total card allocation crosses the threshold than with the DMA destination address alone.
+
+The report also says that changing both visible `LTC_DECODE` registers from their observed `0x70000300` / `0x70010300` values to `0x10000300` / `0x10010300` persisted but did not change the failure. That weakens this particular decode-field hypothesis for this failure mode; it does not eliminate other client-specific mapping or bookkeeping state.
+
+## Client-specific framebuffer state hypothesis
+
+A new working hypothesis is:
+
+> The coherent 80-GB HBM geometry may be usable by SM load/store paths while one or more Copy Engine, GSP, RM, PMA, GPU-VA, BAR2, WPR, heap, or allocation-bookkeeping paths retain a 40-GB-derived bound or incompatible memory layout.
+
+Possible sub-hypotheses include a stale aperture or segment bound, a capacity table derived from the original SKU, a truncated DMA-related address or size, or an 80-GB WPR/heap layout interacting with a 40-GB-sized internal structure. These are hypotheses, not findings.
+
+Important evidence boundaries:
+
+* this repository has not independently reproduced the report
+* the two minimal programs use equivalent allocation patterns, not the same live allocation in one process
+* `cudaMemcpy` changes more than the physical writer: mappings, RM/GSP activity, allocation state, and transfer semantics may also differ
+* the clean kernel tests do not prove complete 80-GB stability, refresh correctness, or safe teardown; the report separately observed a GSP fault during `cudaFree` after a clean 76-GiB verdict
+
+A high-value reproduction is therefore a controlled, same-card and preferably same-allocation comparison of kernel write/read and H2D write/read above 40 GiB, with matched GPU-VA mappings, allocation order, GSP logs, and register snapshots.
+
+The source warns that one faulted card can temporarily prevent CUDA allocation on every card in the same host. Some cards recovered with `nvidia-smi -r`; others required a true power cycle with the rails dropped. Any reproduction needs an isolation and recovery plan.
 
 # Samsung HBM Identification
 
@@ -650,6 +695,19 @@ Important for:
 * low-level GPU access
 * experimental tooling
 
+### CMP 170HX 80-GB GSP/DMA report
+
+https://gist.github.com/cuddylac997/c3d80faa2430e3650cd934eda5fd65a9
+
+Important for:
+
+* paired CUDA-kernel-fill and H2D-fill test programs
+* clean tagged kernel write/read-back reported through 75–76 GiB
+* the reported 38.5–44-GiB H2D/GSP failure transition
+* recurring GSP fault signatures
+* the staging experiment that separates H2D activity from the final high-memory destination
+* the no-effect `LTC_DECODE` write experiment
+
 ### Samsung Flashbolt HBM2E
 
 https://semiconductor.samsung.com/dram/hbm/hbm2e-flashbolt/
@@ -668,6 +726,9 @@ The main current leads are:
 
 * determine exactly what the published shadow-register operation changes
 * compare the same CMP10 in stock, 40 GB, and 80 GB states
+* independently reproduce the kernel-fill versus H2D-fill asymmetry on the same card and preferably the same live allocation
+* determine whether Copy Engine, GSP, RM, PMA, BAR2, WPR/heap, or GPU-VA state retains a 40-GB-derived bound or layout
+* resolve the recurring reported GSP PC `0x5b2ba28` against the matching GSP image
 * extend register dumps to generated timings and refresh state
 * understand Samsung `XA2_8HI`
 * compare Samsung 8-Gb and 16-Gb profiles known to NVIDIA MODS
@@ -736,6 +797,9 @@ an experimental GA100 80 GB geometry is known
 
 published research reports 80 GB of distinct memory
 
+an independent community report describes clean kernel write/read-back
+through 75-76 GiB but H2D-triggered GSP failure after roughly 38.5-44 GiB
+
 that 80 GB configuration showed stability problems
 
 increasing refresh reportedly eliminated the errors
@@ -753,6 +817,9 @@ the exact shadow-register configuration used for full capacity
 the correct stable Samsung 80 GB memory profile
 
 whether the instability is caused by binning or configuration
+
+whether the reported H2D/GSP threshold comes from client-specific
+framebuffer state, allocation bookkeeping, mappings, or another side effect
 
 the complete reproducible unlock procedure
 ```
