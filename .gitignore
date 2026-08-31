@@ -1,2 +1,33 @@
+# Phase 04 working directory (scripts, patches, data, tools)
+/04_h2d-gsp-access-path/
+
+# A/B dump raw data
+/ab_dump/
+
+# Static GA100 HBM state register corpus
+/data/
+
+# Host/GPU report collection tools
+/tools/
+
+# cmpunlocker vendor snapshot
+/vendor/
+
 # Locally acquired proprietary/research artifacts
 /artifacts/
+
+# Generated host/GPU inventories, fuse dumps, VRAM tests and thermal logs
+/reports/
+/gpu-report-*/
+/hbm-test-*/
+/first-inventory/
+/post-unlock/
+/fuse-report/
+
+# Stale / supplementary files (kept on disk, not published)
+/REPLAY_KIT_SHA256SUMS
+/__gpu_and_host_validation.md
+/01_ieee1500-samsung-hidden-capacity_map.md
+/02_static-ga100-hbm-state_plan.md
+/03_gpu-80g-stability-state-diff_plan.md
+/03_gpu-80g-stability-state-diff_source-audit.md
