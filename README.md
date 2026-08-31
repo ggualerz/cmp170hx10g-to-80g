@@ -37,6 +37,11 @@ Four research phases are preserved in this repository:
 | `02` static GA100 HBM state | Closed without a complete stability fix; narrowed remaining gaps to generated-timing relatching and trained PHY state | [`02_static-ga100-hbm-state.md`](02_static-ga100-hbm-state.md) |
 | `04` H2D/GSP access path | 79 GiB SM kernel fill+verify confirmed clean (WPR2-fix, no SEC2 patch). H2D writes above 40 GB **never passed** — the GSP-RM 40 GB allocation limit was never broken. Limit appears tied to the card's hardware identity (OTP fuse `FUSE_PCIE_DEVIDA=0x2082` is the primary suspect, not confirmed) → SKU table → HAL dispatch layout mismatch; 40 GB stable is the ceiling; 80 GB blocked by firmware-internal class selection (A/B on 10 GB card showed identical SKU/class between 40 GB and 80 GB, but the 8 GB→64 GB card was not tested) | [`04_h2d-gsp-access-path.md`](04_h2d-gsp-access-path.md), [`open questions`](04_h2d-gsp-access-path_to-confirm.md) |
 
+Third-party reference material (Consensus-Protocol/cmp170hx wiki, imported verbatim with
+attribution): [`references/consensus-protocol/`](references/consensus-protocol/README.md) —
+the 121-register cross-card fuse survey, register index and reference, and the community
+80 GB attempt history.
+
 ## Phase 04 summary
 
 **Directly observed:** a deterministic GSP-RM failure occurs whenever

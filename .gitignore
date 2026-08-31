@@ -26,6 +26,7 @@
 
 # Stale / supplementary files (kept on disk, not published)
 /REPLAY_KIT_SHA256SUMS
+/NEXT_RUN.md
 /__gpu_and_host_validation.md
 /01_ieee1500-samsung-hidden-capacity_map.md
 /02_static-ga100-hbm-state_plan.md
